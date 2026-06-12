@@ -6,7 +6,7 @@
 <title>家族照顧開銷與對帳中心</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2 family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#f4ede0;--paper-2:#ece2d0;--ink:#2b2420;--ink-soft:#6b5d4f;--line:#d8ccb6;
@@ -84,11 +84,12 @@
   
   /* 專屬收據縮圖樣式 */
   .receipt-preview {
-    display: block; max-width: 120px; max-height: 120px; 
+    display: block; max-width: 140px; max-height: 140px; 
     border: 1px solid var(--line); margin-top: 6px; cursor: pointer;
     box-shadow: 2px 2px 0 var(--shadow); transition: transform 0.2s;
   }
   .receipt-preview:hover { transform: scale(1.05); }
+  .upload-status { font-size:12px; color:var(--green); margin-top:4px; display:none; font-weight:bold; }
 
   .entry.payable-card{border:1.5px solid var(--ink);background:var(--paper);margin-bottom:8px;padding:12px;box-shadow:3px 3px 0 var(--shadow);}
   .entry.payable-card.paid-true{opacity:0.6;background:var(--paper-2);border-color:var(--ink-soft);box-shadow:none;}
@@ -146,7 +147,15 @@
         <div class="field"><label>開銷分類</label><select id="category"><option>醫療看護</option><option>飲食營養</option><option>生活雜支</option><option>交通醫療</option><option>其他開銷</option></select></div>
         <div class="field"><label>日期</label><input type="date" id="date"></div>
       </div>
-      <div class="field"><label>詳細備註說明 / 圖片編碼</label><input type="text" id="note" placeholder="例如：買尿布兩箱、門診掛號費"></div>
+      <div class="field"><label>詳細備註說明</label><input type="text" id="note" placeholder="例如：買尿布兩箱、門診掛號費"></div>
+      
+      <div class="field">
+        <label>附加收據照片 (可選)</label>
+        <input type="file" id="photoFile" accept="image/*" style="display:none;" onchange="handlePhotoUpload(this)">
+        <button type="button" class="add-btn" style="background:var(--paper); color:var(--ink); margin-bottom:4px;" onclick="$('photoFile').click()">📷 拍照或選擇收據圖片</button>
+        <div id="uploadStatus" class="upload-status">✓ 照片已成功就緒</div>
+      </div>
+
       <button class="add-btn" id="addLedgerBtn">寫入雲端帳本</button>
     </section>
     <div class="list-head">📋 爺爺日常消費明細 (所有人均可查看)</div>
@@ -184,12 +193,13 @@
 </div>
 
 <script>
-// 🚀 請換成你部署成功的正式 GAS 網址
+// 🚀 請確保這裡換成了你部署成功的正式 GAS 網址！
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxddL8UWgCRuVsqO20d4UXhWuyDHCmZJdA3fH5wvoYw65kVxHiP_VsbedqbvDBgkwGm/exec";
 
 const PASSWORDS = { "爸爸":"888", "大姑姑":"111", "小姑姑":"222", "媽媽":"333", "我":"000" };
 let currentUser = "";
 let cloudData = { ledger: [], payables: [] };
+let tempPhotoBase64 = ""; // 暫存照片字串
 const $ = id => document.getElementById(id);
 
 function checkLogin() {
@@ -228,15 +238,55 @@ async function fetchCloudData() {
   finally { $("loading").style.display = "none"; }
 }
 
-// 👁️ 智慧圖片解析輔助函式
+// 👁️ 智慧圖片與備註解析輔助函式
 function renderNoteContent(noteText) {
   if (!noteText) return '無備註';
-  // 如果字串開頭是 data:image，就把它渲染成圖片標籤
+  
+  // 判斷是否為單純的照片編碼
   if (noteText.trim().startsWith("data:image")) {
     return `<img src="${noteText.trim()}" class="receipt-preview" alt="收據照片" onclick="window.open(this.src)">`;
   }
-  // 否則就當一般文字顯示
+  
+  // 判斷是否為「備註 + 照片」的複合式結構
+  if (noteText.includes("||data:image")) {
+    const parts = noteText.split("||data:image");
+    const txt = parts[0] || "無備註說明";
+    const imgData = "data:image" + parts[1];
+    return `<div>${escapeHtml(txt)}</div><img src="${imgData.trim()}" class="receipt-preview" alt="收據照片" onclick="window.open(this.src)">`;
+  }
+  
   return escapeHtml(noteText);
+}
+
+// 📸 照片壓縮與讀取邏輯
+function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  $("uploadStatus").style.display = "block";
+  $("uploadStatus").style.color = "var(--ink-soft)";
+  $("uploadStatus").textContent = "⏳ 正在最佳化圖片尺寸...";
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      // 為了不讓 Google 試算表爆掉，自動將照片等比例壓縮到寬度最大 600px
+      const canvas = document.createElement("canvas");
+      let width = img.width;
+      let height = img.height;
+      if (width > 600) { height *= 600 / width; width = 600; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      tempPhotoBase64 = canvas.toDataURL("image/jpeg", 0.7); // 壓縮品質 0.7
+      $("uploadStatus").style.color = "var(--green)";
+      $("uploadStatus").textContent = `✓ 收據照片準備完畢 (${file.name})`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderAll() {
@@ -304,9 +354,20 @@ function renderAll() {
 
 $("addLedgerBtn").onclick = async () => {
   const amount = parseFloat($("amount").value); if(!amount || amount <= 0) return;
-  const payload = { type: "ledger", id: "L-"+Date.now(), user: currentUser, amount: amount, category: $("category").value, date: $("date").value, note: $("note").value.trim() };
+  
+  // 整合文字備註與照片資料
+  let finalNote = $("note").value.trim();
+  if (tempPhotoBase64) {
+    finalNote = finalNote ? `${finalNote}||${tempPhotoBase64}` : tempPhotoBase64;
+  }
+
+  const payload = { type: "ledger", id: "L-"+Date.now(), user: currentUser, amount: amount, category: $("category").value, date: $("date").value, note: finalNote };
   cloudData.ledger.unshift(payload); renderAll();
-  $("amount").value = ""; $("note").value = "";
+  
+  // 清空輸入欄位與照片暫存
+  $("amount").value = ""; $("note").value = ""; $("photoFile").value = "";
+  tempPhotoBase64 = ""; $("uploadStatus").style.display = "none";
+
   await sendToGas(payload); fetchCloudData();
 };
 
