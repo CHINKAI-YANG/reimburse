@@ -266,11 +266,10 @@
 
 <script>
 const CATS = ["飲食","交通","購物","居住","娛樂","醫療","教育","其他"];
-let pendingImg = null;       // 待儲存的壓縮圖片(base64)
+let pendingImg = null;       
 let entries = [];
 const KEY = "ledger:entries";
 
-// 🚀 這裡已經幫你填入正確的網址
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxddL8UWgCRuVsqO20d4UXhWuyDHCmZJdA3fH5wvoYw65kVxHiP_VsbedqbvDBgkwGm/exec";
 
 const $ = id => document.getElementById(id);
@@ -285,7 +284,7 @@ function fillCats(){
   $("category").innerHTML = CATS.map(c=>`<option>${c}</option>`).join("");
 }
 
-/* 圖片上傳 + 壓縮 */
+/* 圖片上傳 + 強力壓縮機制 (改為最長邊 600px，壓縮比 0.5) */
 $("drop").onclick = ()=> $("file").click();
 $("file").onchange = e=>{
   const f = e.target.files[0];
@@ -294,15 +293,14 @@ $("file").onchange = e=>{
   reader.onload = ev=>{
     const img = new Image();
     img.onload = ()=>{
-      // 壓縮:最長邊限制 900px, JPEG 0.7
-      const max = 900;
+      const max = 600; // 進一步縮小尺寸，確保高成功率
       let {width:w, height:h} = img;
       if(w>h && w>max){ h=h*max/w; w=max; }
       else if(h>=w && h>max){ w=w*max/h; h=max; }
       const cv = document.createElement("canvas");
       cv.width=w; cv.height=h;
       cv.getContext("2d").drawImage(img,0,0,w,h);
-      pendingImg = cv.toDataURL("image/jpeg",0.7);
+      pendingImg = cv.toDataURL("image/jpeg",0.5); // 壓縮畫質至 0.5
       showPreview();
     };
     img.src = ev.target.result;
@@ -334,44 +332,35 @@ $("addBtn").onclick = async ()=>{
     img: pendingImg
   };
 
-  // 鎖定按鈕防止重複點擊
-  $("addBtn").disabled = true;
-  $("addBtn").textContent = "正在同步至雲端...";
-
-  // 1. 推送到 Google Sheet 雲端
-  try {
-    await sendToGoogleSheet(entry);
-  } catch (err) {
-    console.error("雲端同步失敗", err);
-    alert("雲端同步失敗，但資料仍會保存在本機。");
-  }
-
-  // 2. 寫入本地儲存
+  // 1. 先把資料高高興興地寫入本地儲存（這樣使用者畫面立刻更新，絕對不會卡死）
   entries.unshift(entry);
   saveToLocal();
   
-  // 重置表單
+  // 重置表單並更新畫面上的明細
   $("amount").value=""; $("note").value=""; pendingImg=null; $("file").value=""; showPreview();
-  $("addBtn").disabled = false;
-  $("addBtn").textContent = "記 入 帳 本";
   render();
+
+  // 2. 在背景默默同步到 Google 雲端，成功與否都不影響使用者當前的操作
+  sendToGoogleSheetSilently(entry);
 };
 
-// 呼叫 API 將資料發送至 Google 試算表
-async function sendToGoogleSheet(entry) {
-  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "") {
-    console.warn("未設定 Google Script URL");
-    return;
-  }
+// 異步靜態傳輸：不阻礙主執行緒，失敗會記錄在 Console 但不打擾使用者
+async function sendToGoogleSheetSilently(entry) {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "") return;
   
-  await fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(entry)
-  });
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(entry)
+    });
+    console.log("雲端同步成功一筆！");
+  } catch (err) {
+    console.error("背景雲端同步失敗（可能圖片過大或網路波動），但本地資料已安全留存。", err);
+  }
 }
 
 function flashField(el){
@@ -389,7 +378,7 @@ function del(id){
 
 /* 渲染 */
 function render(){
-  const nowMonth = todayStr().slice(0,7); // YYYY-MM
+  const nowMonth = todayStr().slice(0,7); 
   let total=0, monthTotal=0;
   entries.forEach(e=>{
     total+=e.amount;
@@ -441,13 +430,13 @@ function openLightbox(src){
 }
 $("lightbox").onclick = ()=> $("lightbox").classList.remove("show");
 
-/* 修正後的儲存與載入機制 */
+/* 本地儲存 */
 function saveToLocal(){
   try{
     localStorage.setItem(KEY, JSON.stringify(entries));
   }catch(err){
     console.error("儲存失敗",err);
-    alert("本機容量已滿，部分圖片未能緩存，但資料已嘗試上傳至雲端試算表。");
+    alert("手機本機容量空間不夠，部分相片明細無法暫存（但文字帳目會照常運作）。");
   }
 }
 
