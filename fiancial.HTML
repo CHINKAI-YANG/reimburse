@@ -3,454 +3,343 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>帳本 · Ledger</title>
+<title>家族照顧開銷與對帳中心</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#f4ede0;
-    --paper-2:#ece2d0;
-    --ink:#2b2420;
-    --ink-soft:#6b5d4f;
-    --line:#d8ccb6;
-    --accent:#c0392b;     /* 朱紅 */
-    --green:#3f6b4d;      /* 收入墨綠 */
-    --gold:#a9853f;
-    --shadow:rgba(43,36,32,.16);
+    --paper:#f4ede0;--paper-2:#ece2d0;--ink:#2b2420;--ink-soft:#6b5d4f;--line:#d8ccb6;
+    --accent:#c0392b;--green:#3f6b4d;--shadow:rgba(43,36,32,.16);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
   body{
-    font-family:"Noto Sans TC",sans-serif;
-    color:var(--ink);
-    background:
-      radial-gradient(circle at 20% 10%, #faf4e9, transparent 60%),
-      radial-gradient(circle at 90% 80%, #efe5d2, transparent 55%),
-      var(--paper);
-    background-attachment:fixed;
-    min-height:100vh;
-    padding:32px 16px 80px;
-    -webkit-font-smoothing:antialiased;
+    font-family:"Noto Sans TC",sans-serif;color:var(--ink);
+    background: radial-gradient(circle at 20% 10%, #faf4e9, transparent 60%), radial-gradient(circle at 90% 80%, #efe5d2, transparent 55%), var(--paper);
+    background-attachment:fixed;min-height:100vh;padding:20px 16px 80px;
   }
-  /* 紙張纖維紋理 */
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;z-index:0;
-    background-image:repeating-linear-gradient(0deg,#000 0 1px,transparent 1px 3px);
-  }
-  .wrap{max-width:760px;margin:0 auto;position:relative;z-index:1}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;z-index:0;background-image:repeating-linear-gradient(0deg,#000 0 1px,transparent 1px 3px);}
+  .wrap{max-width:760px;margin:0 auto;position:relative;z-index:1;display:none;} 
 
-  /* 報頭 */
-  header.masthead{
-    text-align:center;border-bottom:3px double var(--ink);
-    padding-bottom:18px;margin-bottom:8px;
+  /* 登入遮罩 */
+  .login-overlay{
+    position:fixed;inset:0;background:var(--paper);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:20px;
   }
-  .masthead .kicker{
-    font-family:"Fraunces",serif;font-style:italic;letter-spacing:.18em;
-    text-transform:uppercase;font-size:12px;color:var(--ink-soft);
+  .login-box{
+    background:var(--paper-2);border:2px solid var(--ink);padding:30px;
+    width:100%;max-width:360px;box-shadow:6px 6px 0 var(--shadow);text-align:center;
   }
-  .masthead h1{
-    font-family:"Noto Serif TC","Fraunces",serif;font-weight:900;
-    font-size:clamp(40px,9vw,72px);line-height:.95;letter-spacing:.04em;margin:6px 0;
+  .login-box h2{font-family:"Noto Serif TC",serif;margin-bottom:20px;font-size:22px}
+  .login-box select, .login-box input{
+    width:100%;padding:12px;margin-bottom:15px;border:1.5px solid var(--ink);
+    background:var(--paper);font-size:15px;font-family:inherit;
   }
-  .masthead .date{
-    font-family:"Fraunces",serif;font-size:13px;color:var(--ink-soft);letter-spacing:.1em;
+  .login-box button{
+    width:100%;padding:12px;background:var(--ink);color:var(--paper);
+    border:none;font-weight:bold;cursor:pointer;font-size:16px;
   }
 
-  /* 結餘卡 */
-  .summary{
-    display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:1px;
-    background:var(--line);border:1.5px solid var(--ink);
-    margin:26px 0;box-shadow:6px 6px 0 var(--shadow);
-  }
-  .summary .cell{background:var(--paper);padding:18px 16px}
-  .summary .cell:first-child{background:var(--ink);color:var(--paper)}
-  .cell .lab{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-bottom:6px;font-family:"Fraunces",serif;font-style:italic}
-  .cell .num{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(20px,5vw,30px);line-height:1}
-  .cell .num.sm{font-size:clamp(17px,4vw,23px)}
-  .cell.exp .num{color:var(--accent)}
-  .cell.inc .num{color:var(--green)}
-  .num::before{content:"$";font-size:.6em;vertical-align:.12em;margin-right:2px;opacity:.6}
-  .num.nodollar::before{content:none}
+  /* 主介面 */
+  header.masthead{text-align:center;border-bottom:3px double var(--ink);padding-bottom:12px;margin-bottom:20px;}
+  .masthead h1{font-family:"Noto Serif TC",serif;font-weight:900;font-size:32px;margin:4px 0;}
+  .user-banner{display:flex;justify-content:space-between;background:var(--ink);color:var(--paper);padding:10px 14px;margin-bottom:20px;font-size:14px;font-weight:bold;}
+  .user-banner button{background:none;border:none;color:var(--paper);cursor:pointer;text-decoration:underline;font-size:12px;}
 
-  /* 新增表單 */
-  .panel{
-    background:var(--paper-2);border:1.5px solid var(--ink);
-    padding:22px;margin-bottom:30px;box-shadow:6px 6px 0 var(--shadow);
+  .tabs{display:flex;gap:10px;margin-bottom:20px;}
+  .tab-btn{
+    flex:1;padding:12px;background:var(--paper-2);border:1.5px solid var(--ink);
+    font-family:"Noto Serif TC",serif;font-weight:600;font-size:15px;cursor:pointer;color:var(--ink-soft);
   }
-  .panel h2{
-    font-family:"Noto Serif TC",serif;font-weight:600;font-size:19px;
-    margin-bottom:16px;display:flex;align-items:center;gap:10px;
-  }
-  .panel h2::before{content:"✦";color:var(--accent);font-size:14px}
+  .tab-btn.active{background:var(--ink);color:var(--paper);}
 
-  .seg{display:flex;gap:0;margin-bottom:16px;border:1.5px solid var(--ink)}
-  .seg button{
-    flex:1;padding:11px;border:none;background:transparent;cursor:pointer;
-    font-family:"Noto Sans TC";font-weight:700;font-size:15px;color:var(--ink-soft);
-    transition:.18s;letter-spacing:.05em;
-  }
-  .seg button+button{border-left:1.5px solid var(--ink)}
-  .seg button.on[data-k="expense"]{background:var(--accent);color:#fff}
-  .seg button.on[data-k="income"]{background:var(--green);color:#fff}
+  .system-page{display:none;}
+  .system-page.active{display:block;}
 
-  .field{margin-bottom:14px}
-  .field label{display:block;font-size:12px;letter-spacing:.1em;color:var(--ink-soft);margin-bottom:5px;font-weight:500;text-transform:uppercase;font-family:"Fraunces",serif;font-style:italic}
-  .field input,.field select,.field textarea{
-    width:100%;padding:11px 12px;border:1.5px solid var(--line);background:var(--paper);
-    font-family:"Noto Sans TC";font-size:15px;color:var(--ink);border-radius:0;
-    transition:.18s;
-  }
-  .field input:focus,.field select:focus,.field textarea:focus{
-    outline:none;border-color:var(--ink);box-shadow:3px 3px 0 var(--shadow);
-  }
-  .field textarea{resize:vertical;min-height:46px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .amount-in{font-family:"Fraunces",serif;font-weight:600;font-size:22px}
+  /* 統計區 */
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1.5px solid var(--ink);margin-bottom:20px;}
+  .summary .cell{background:var(--paper);padding:14px;}
+  .cell .lab{font-size:11px;color:var(--ink-soft);font-family:"Fraunces",serif;font-style:italic}
+  .cell .num{font-family:"Fraunces",serif;font-weight:600;font-size:24px;}
+  .num::before{content:"$";font-size:.6em;margin-right:2px;opacity:.6}
 
-  /* 圖片上傳 */
-  .drop{
-    border:1.5px dashed var(--ink-soft);background:var(--paper);
-    padding:16px;text-align:center;cursor:pointer;transition:.18s;color:var(--ink-soft);
-    font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;
-  }
-  .drop:hover{border-color:var(--ink);background:#fbf6ec}
-  .drop svg{width:20px;height:20px;flex:none}
-  .preview-thumb{max-height:120px;border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow)}
-  .preview-wrap{position:relative;display:inline-block;margin-top:4px}
-  .preview-wrap .x{
-    position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:50%;
-    background:var(--accent);color:#fff;border:1.5px solid var(--ink);cursor:pointer;
-    font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;
-  }
+  .panel{background:var(--paper-2);border:1.5px solid var(--ink);padding:20px;margin-bottom:20px;}
+  .panel h2{font-family:"Noto Serif TC",serif;font-size:16px;margin-bottom:12px;}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .field input, .field select{width:100%;padding:10px;border:1.5px solid var(--line);background:var(--paper);font-size:14px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-  .add-btn{
-    width:100%;margin-top:6px;padding:14px;background:var(--ink);color:var(--paper);
-    border:1.5px solid var(--ink);font-family:"Noto Serif TC";font-weight:600;font-size:16px;
-    cursor:pointer;letter-spacing:.12em;transition:.18s;box-shadow:4px 4px 0 var(--shadow);
-  }
-  .add-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--shadow)}
-  .add-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+  .add-btn{width:100%;padding:12px;background:var(--ink);color:var(--paper);border:1.5px solid var(--ink);font-weight:bold;cursor:pointer;}
 
-  /* 帳目列表 */
-  .ledger-head{
-    display:flex;align-items:baseline;justify-content:space-between;
-    border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:4px;
-  }
-  .ledger-head h2{font-family:"Noto Serif TC",serif;font-weight:600;font-size:20px}
-  .ledger-head .count{font-family:"Fraunces",serif;font-style:italic;color:var(--ink-soft);font-size:13px}
+  .list-head{font-family:"Noto Serif TC",serif;font-weight:600;font-size:16px;border-bottom:2px solid var(--ink);padding-bottom:6px;margin:20px 0 10px;}
 
-  .entry{
-    display:flex;align-items:center;gap:14px;padding:14px 4px;
-    border-bottom:1px solid var(--line);animation:rise .35s ease both;
-  }
-  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  .entry .tag{
-    width:8px;align-self:stretch;flex:none;border-radius:1px;
-  }
-  .entry.expense .tag{background:var(--accent)}
-  .entry.income .tag{background:var(--green)}
-  .entry .img{
-    width:48px;height:48px;flex:none;object-fit:cover;border:1.5px solid var(--ink);
-    cursor:pointer;background:var(--paper-2);
-  }
-  .entry .img.placeholder{display:flex;align-items:center;justify-content:center;color:var(--line);font-size:20px}
+  /* 卡片與明細外觀 */
+  .entry{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--line);}
+  .entry .user-tag{font-size:11px;background:var(--ink);color:var(--paper);padding:2px 6px;font-weight:bold;flex:none}
   .entry .meta{flex:1;min-width:0}
-  .entry .meta .cat{font-weight:700;font-size:15px}
-  .entry .meta .sub{font-size:12px;color:var(--ink-soft);margin-top:2px;font-family:"Fraunces",serif;font-style:italic}
-  .entry .meta .note{font-size:12.5px;color:var(--ink-soft);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .entry .amt{font-family:"Fraunces",serif;font-weight:600;font-size:19px;white-space:nowrap}
-  .entry.expense .amt{color:var(--accent)}
-  .entry.income .amt{color:var(--green)}
-  .entry .amt::before{content:"$";font-size:.62em;opacity:.6;margin-right:1px}
-  .entry .del{
-    background:none;border:none;cursor:pointer;color:var(--line);font-size:18px;padding:4px 6px;transition:.18s;flex:none;
+  .entry .meta .cat{font-weight:700;font-size:14px;}
+  .entry .meta .sub{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .entry .amt{font-family:"Fraunces",serif;font-weight:600;font-size:18px;color:var(--accent)}
+  
+  /* 專屬收據縮圖樣式 */
+  .receipt-preview {
+    display: block; max-width: 120px; max-height: 120px; 
+    border: 1px solid var(--line); margin-top: 6px; cursor: pointer;
+    box-shadow: 2px 2px 0 var(--shadow); transition: transform 0.2s;
   }
-  .entry .del:hover{color:var(--accent)}
+  .receipt-preview:hover { transform: scale(1.05); }
 
-  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft)}
-  .empty .big{font-family:"Noto Serif TC",serif;font-size:46px;opacity:.35;margin-bottom:8px}
-  .empty p{font-family:"Fraunces",serif;font-style:italic;font-size:15px}
+  .entry.payable-card{border:1.5px solid var(--ink);background:var(--paper);margin-bottom:8px;padding:12px;box-shadow:3px 3px 0 var(--shadow);}
+  .entry.payable-card.paid-true{opacity:0.6;background:var(--paper-2);border-color:var(--ink-soft);box-shadow:none;}
+  .entry.payable-card.paid-true .amt{color:var(--green);text-decoration:line-through;}
 
-  /* 圖片放大 */
-  .lightbox{
-    position:fixed;inset:0;background:rgba(20,16,12,.86);display:none;
-    align-items:center;justify-content:center;z-index:50;padding:30px;cursor:zoom-out;
-    backdrop-filter:blur(3px);
-  }
-  .lightbox.show{display:flex;animation:fade .2s}
-  @keyframes fade{from{opacity:0}to{opacity:1}}
-  .lightbox img{max-width:100%;max-height:100%;border:4px solid var(--paper);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .btn-status{padding:6px 10px;border:1.5px solid var(--ink);background:var(--paper);font-size:12px;font-weight:600;cursor:pointer;box-shadow:2px 2px 0 var(--shadow);}
+  .btn-status:hover{background:var(--ink);color:var(--paper);}
+  .btn-del{background:none;border:none;cursor:pointer;color:var(--line);font-size:16px;margin-left:6px}
+  .btn-del:hover{color:var(--accent)}
 
-  footer{text-align:center;margin-top:40px;font-family:"Fraunces",serif;font-style:italic;color:var(--ink-soft);font-size:12px;letter-spacing:.1em}
-
-  @media(max-width:560px){
-    .summary{grid-template-columns:1fr;}
-    .summary .cell:first-child{grid-column:1}
-    .row{grid-template-columns:1fr}
-  }
+  .loading-mask{text-align:center;padding:20px;font-style:italic;color:var(--ink-soft);font-weight:bold}
+  .empty{text-align:center;padding:30px;color:var(--ink-soft);font-size:14px;font-style:italic}
+  footer{text-align:center;margin-top:40px;font-family:"Fraunces",serif;font-style:italic;color:var(--ink-soft);font-size:12px;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="masthead">
-    <div class="kicker">Personal Finance · 私人帳簿</div>
-    <h1>帳 本</h1>
-    <div class="date" id="todayLabel"></div>
-  </header>
 
-  <section class="summary">
-    <div class="cell">
-      <div class="lab">This Month 本月支出</div>
-      <div class="num" id="monthExp">0</div>
-    </div>
-    <div class="cell exp">
-      <div class="lab">Total 總支出</div>
-      <div class="num sm" id="totalExp">0</div>
-    </div>
-    <div class="cell">
-      <div class="lab">Records 筆數</div>
-      <div class="num sm nodollar" id="recCount">0</div>
-    </div>
-  </section>
-
-  <section class="panel">
-    <h2>記一筆</h2>
-
-    <div class="field">
-      <label>金額</label>
-      <input type="number" id="amount" class="amount-in" placeholder="0" min="0" step="1" inputmode="decimal">
-    </div>
-
-    <div class="row">
-      <div class="field">
-        <label>分類</label>
-        <select id="category"></select>
-      </div>
-      <div class="field">
-        <label>日期</label>
-        <input type="date" id="date">
-      </div>
-    </div>
-
-    <div class="field">
-      <label>備註</label>
-      <textarea id="note" placeholder="午餐、車費、薪水…"></textarea>
-    </div>
-
-    <div class="field">
-      <label>收據 / 照片</label>
-      <div class="drop" id="drop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M12 3v13M7 8l5-5 5 5"/></svg>
-        <span id="dropText">點此上傳圖片(可選)</span>
-      </div>
-      <input type="file" id="file" accept="image/*" hidden>
-      <div id="previewBox"></div>
-    </div>
-
-    <button class="add-btn" id="addBtn">記 入 帳 本</button>
-  </section>
-
-  <section>
-    <div class="ledger-head">
-      <h2>明細</h2>
-      <span class="count" id="count">— 筆紀錄</span>
-    </div>
-    <div id="list"></div>
-  </section>
-
-  <footer>— 資料自動保存於本機與雲端 · Keep good records —</footer>
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>爺爺照顧帳簿 · 身分認證</h2>
+    <select id="loginUser">
+      <option value="爸爸">爸爸</option>
+      <option value="大姑姑">大姑姑</option>
+      <option value="小姑姑">小姑姑</option>
+      <option value="媽媽">媽媽</option>
+      <option value="我">我</option>
+    </select>
+    <input type="password" id="loginPass" placeholder="請輸入專屬密碼">
+    <button onclick="checkLogin()">確認身分並登入</button>
+  </div>
 </div>
 
-<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+<div class="wrap" id="mainWrap">
+  <header class="masthead">
+    <h1>家族雲端對帳中心</h1>
+  </header>
+
+  <div class="user-banner">
+    <span>👤 目前登入：<span id="currentUserLabel" style="color:#faf4e9; font-size:15px; border-bottom:1px dashed #fff;"></span></span>
+    <button onclick="logout()">切換身分</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="t1" onclick="switchTab('ledgerPage', this)">🛒 爺爺日常開銷 (全員共享)</button>
+    <button class="tab-btn" id="t2" onclick="switchTab('payablesPage', this)">🔒 專屬對帳單 (隱私保護)</button>
+  </div>
+
+  <div id="loading" class="loading-mask">🔄 正在安全過濾雲端資料...</div>
+
+  <div id="ledgerPage" class="system-page active">
+    <section class="panel">
+      <h2>登記爺爺開銷 (填表人將自動綁定)</h2>
+      <div class="field"><label>開銷金額</label><input type="number" id="amount" placeholder="0" inputmode="decimal"></div>
+      <div class="row">
+        <div class="field"><label>開銷分類</label><select id="category"><option>醫療看護</option><option>飲食營養</option><option>生活雜支</option><option>交通醫療</option><option>其他開銷</option></select></div>
+        <div class="field"><label>日期</label><input type="date" id="date"></div>
+      </div>
+      <div class="field"><label>詳細備註說明 / 圖片編碼</label><input type="text" id="note" placeholder="例如：買尿布兩箱、門診掛號費"></div>
+      <button class="add-btn" id="addLedgerBtn">寫入雲端帳本</button>
+    </section>
+    <div class="list-head">📋 爺爺日常消費明細 (所有人均可查看)</div>
+    <div id="ledgerList"></div>
+  </div>
+
+  <div id="payablesPage" class="system-page">
+    <section class="summary">
+      <div class="cell"><div class="lab">與我有關的未結清金額</div><div class="num" id="sumUnpaid">0</div></div>
+      <div class="cell" style="background-color:#efe5d2;"><div class="lab">與我有關的已結清金額</div><div class="num" id="sumPaid">0</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>登記對帳項目 (系統會自動填入你是「登記人」)</h2>
+      <div class="row">
+        <div class="field">
+          <label>要支付給誰 (收款對象)</label>
+          <select id="pWho">
+            <option value="爸爸">爸爸</option><option value="大姑姑">大姑姑</option><option value="小姑姑">小姑姑</option><option value="媽媽">媽媽</option><option value="我">我</option>
+          </select>
+        </div>
+        <div class="field"><label>金額</label><input type="number" id="pAmount" placeholder="0" inputmode="decimal"></div>
+      </div>
+      <div class="field"><label>款項用途備註</label><input type="text" id="pNote" placeholder="例如：大姑姑代墊醫藥費，私下還款用"></div>
+      <button class="add-btn" id="addPayableBtn">登記此筆款項</button>
+    </section>
+
+    <div class="list-head">⏳ 與我有關的未清償明細 (僅相關雙方可見)</div>
+    <div id="unpaidList"></div>
+    <div class="list-head">✅ 與我有關的歷史清償紀錄 (雙方畫面顯示 OK)</div>
+    <div id="paidList"></div>
+  </div>
+
+  <footer>— 隱私過濾安全保護中 —</footer>
+</div>
 
 <script>
-const CATS = ["飲食","交通","購物","居住","娛樂","醫療","教育","其他"];
-let pendingImg = null;       
-let entries = [];
-const KEY = "ledger:entries";
-
+// 🚀 請換成你部署成功的正式 GAS 網址
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxddL8UWgCRuVsqO20d4UXhWuyDHCmZJdA3fH5wvoYw65kVxHiP_VsbedqbvDBgkwGm/exec";
 
+const PASSWORDS = { "爸爸":"888", "大姑姑":"111", "小姑姑":"222", "媽媽":"333", "我":"000" };
+let currentUser = "";
+let cloudData = { ledger: [], payables: [] };
 const $ = id => document.getElementById(id);
 
-/* 初始化 */
-function todayStr(){ return new Date().toISOString().slice(0,10); }
-$("date").value = todayStr();
-$("todayLabel").textContent = new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
-fillCats();
-
-function fillCats(){
-  $("category").innerHTML = CATS.map(c=>`<option>${c}</option>`).join("");
+function checkLogin() {
+  const user = $("loginUser").value;
+  const pass = $("loginPass").value;
+  if(PASSWORDS[user] === pass) {
+    currentUser = user;
+    $("loginOverlay").style.display = "none";
+    $("mainWrap").style.display = "block";
+    $("currentUserLabel").textContent = currentUser;
+    $("date").value = new Date().toISOString().slice(0,10);
+    fetchCloudData();
+  } else {
+    alert("密碼錯誤！請重新輸入。");
+  }
 }
 
-/* 圖片上傳 + 強力壓縮機制 (改為最長邊 600px，壓縮比 0.5) */
-$("drop").onclick = ()=> $("file").click();
-$("file").onchange = e=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const max = 600; // 進一步縮小尺寸，確保高成功率
-      let {width:w, height:h} = img;
-      if(w>h && w>max){ h=h*max/w; w=max; }
-      else if(h>=w && h>max){ w=w*max/h; h=max; }
-      const cv = document.createElement("canvas");
-      cv.width=w; cv.height=h;
-      cv.getContext("2d").drawImage(img,0,0,w,h);
-      pendingImg = cv.toDataURL("image/jpeg",0.5); // 壓縮畫質至 0.5
-      showPreview();
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(f);
-};
-
-function showPreview(){
-  const box = $("previewBox");
-  if(!pendingImg){ box.innerHTML=""; $("dropText").textContent="點此上傳圖片(可選)"; return; }
-  $("dropText").textContent="重新選擇圖片";
-  box.innerHTML = `<div class="preview-wrap">
-      <img src="${pendingImg}" class="preview-thumb" alt="預覽">
-      <div class="x" id="rmImg">×</div></div>`;
-  $("rmImg").onclick = ()=>{ pendingImg=null; $("file").value=""; showPreview(); };
+function logout() {
+  currentUser = ""; $("loginPass").value = "";
+  $("loginOverlay").style.display = "flex"; $("mainWrap").style.display = "none";
 }
 
-/* 新增帳目 */
-$("addBtn").onclick = async ()=>{
-  const amount = parseFloat($("amount").value);
-  if(!amount || amount<=0){ flashField($("amount")); return; }
-  
-  const entry = {
-    id: Date.now()+"-"+Math.random().toString(36).slice(2,6),
-    amount: amount,
-    category: $("category").value,
-    date: $("date").value || todayStr(),
-    note: $("note").value.trim(),
-    img: pendingImg
-  };
+function switchTab(pageId, btn) {
+  document.querySelectorAll('.system-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  $(pageId).classList.add('active'); btn.classList.add('active');
+}
 
-  // 1. 先把資料高高興興地寫入本地儲存（這樣使用者畫面立刻更新，絕對不會卡死）
-  entries.unshift(entry);
-  saveToLocal();
-  
-  // 重置表單並更新畫面上的明細
-  $("amount").value=""; $("note").value=""; pendingImg=null; $("file").value=""; showPreview();
-  render();
-
-  // 2. 在背景默默同步到 Google 雲端，成功與否都不影響使用者當前的操作
-  sendToGoogleSheetSilently(entry);
-};
-
-// 異步靜態傳輸：不阻礙主執行緒，失敗會記錄在 Console 但不打擾使用者
-async function sendToGoogleSheetSilently(entry) {
-  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "") return;
-  
+async function fetchCloudData() {
+  if(!GOOGLE_SCRIPT_URL) return;
+  $("loading").style.display = "block";
   try {
-    await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(entry)
-    });
-    console.log("雲端同步成功一筆！");
-  } catch (err) {
-    console.error("背景雲端同步失敗（可能圖片過大或網路波動），但本地資料已安全留存。", err);
+    const res = await fetch(GOOGLE_SCRIPT_URL);
+    cloudData = await res.json(); renderAll();
+  } catch(err) { console.error("雲端同步失敗", err); }
+  finally { $("loading").style.display = "none"; }
+}
+
+// 👁️ 智慧圖片解析輔助函式
+function renderNoteContent(noteText) {
+  if (!noteText) return '無備註';
+  // 如果字串開頭是 data:image，就把它渲染成圖片標籤
+  if (noteText.trim().startsWith("data:image")) {
+    return `<img src="${noteText.trim()}" class="receipt-preview" alt="收據照片" onclick="window.open(this.src)">`;
   }
+  // 否則就當一般文字顯示
+  return escapeHtml(noteText);
 }
 
-function flashField(el){
-  el.style.borderColor="var(--accent)";
-  el.focus();
-  setTimeout(()=> el.style.borderColor="", 700);
-}
-
-/* 刪除本機明細 */
-function del(id){
-  entries = entries.filter(e=>e.id!==id);
-  saveToLocal();
-  render();
-}
-
-/* 渲染 */
-function render(){
-  const nowMonth = todayStr().slice(0,7); 
-  let total=0, monthTotal=0;
-  entries.forEach(e=>{
-    total+=e.amount;
-    if((e.date||"").slice(0,7)===nowMonth) monthTotal+=e.amount;
-  });
-  $("monthExp").textContent = fmt(monthTotal);
-  $("totalExp").textContent = fmt(total);
-  $("recCount").textContent = entries.length;
-  $("count").textContent = entries.length+" 筆紀錄";
-
-  const list = $("list");
-  if(entries.length===0){
-    list.innerHTML = `<div class="empty"><div class="big">⌘</div><p>還沒有任何紀錄，記下第一筆吧。</p></div>`;
-    return;
-  }
-  list.innerHTML = entries.map(e=>{
-    const imgHtml = e.img
-      ? `<img src="${e.img}" class="img" data-full="${e.id}" alt="收據">`
-      : `<div class="img placeholder">◷</div>`;
-    const sub = fmtDate(e.date);
-    return `<div class="entry expense">
-        <div class="tag"></div>
-        ${imgHtml}
-        <div class="meta">
-          <div class="cat">${e.category}</div>
-          <div class="sub">${sub}</div>
-          ${e.note?`<div class="note">${escapeHtml(e.note)}</div>`:""}
+function renderAll() {
+  // 1. 日常開銷
+  let ledgerHtml = "";
+  cloudData.ledger.sort((a,b)=> b.id.localeCompare(a.id)).forEach(e => {
+    ledgerHtml += `
+      <div class="entry">
+        <span class="user-tag" style="background:#6b5d4f;">填表人: ${escapeHtml(e.user)}</span>
+        <div class="meta" style="margin-left:10px">
+          <div class="cat">${escapeHtml(e.category)} <span style="font-size:11px;color:var(--ink-soft)">(${e.date})</span></div>
+          <div class="sub">${renderNoteContent(e.note)}</div>
         </div>
-        <div class="amt">${fmt(e.amount)}</div>
-        <button class="del" data-del="${e.id}" title="刪除本機紀錄">✕</button>
-      </div>`;
-  }).join("");
+        <div class="amt">${Math.round(e.amount).toLocaleString()}</div>
+      </div>
+    `;
+  });
+  $("ledgerList").innerHTML = ledgerHtml || '<div class="empty">暫無日常消費明細</div>';
 
-  list.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>del(b.dataset.del));
-  list.querySelectorAll("[data-full]").forEach(img=> img.onclick=()=>openLightbox(img.src));
+  // 2. 對帳借貸
+  let sumUnpaid = 0, sumPaid = 0;
+  let unpaidHtml = "", paidHtml = "";
+  
+  cloudData.payables.sort((a,b)=> b.id.localeCompare(a.id)).forEach(e => {
+    if (e.user !== currentUser && e.who !== currentUser) return; 
+
+    let cardStatusText = "";
+    let btnText = "";
+    
+    if(e.isPaid) {
+      cardStatusText = `<span style="color:var(--green); font-size:12px; font-weight:bold;">✨ OK 已付清 (核銷人: ${escapeHtml(e.who)})</span>`;
+      btnText = "重設為未付 ↩";
+    } else {
+      cardStatusText = `<span style="color:var(--accent); font-size:12px; font-weight:bold;">⏳ 待付中</span>`;
+      btnText = `確認收到 ✔`;
+    }
+
+    const html = `
+      <div class="entry payable-card paid-${e.isPaid}">
+        <div class="info" style="flex:1">
+          <div style="font-weight:bold; color:var(--ink); margin-bottom:4px;">
+            【${escapeHtml(e.user)}】 ➔ 應付給 【${escapeHtml(e.who)}】
+          </div>
+          <div style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;">${escapeHtml(e.note || '無用途備註')}</div>
+          <div>${cardStatusText}</div>
+        </div>
+        <div class="amt" style="margin-right:12px; font-family:'Fraunces'; font-weight:600; font-size:18px;">$${Math.round(e.amount).toLocaleString()}</div>
+        <button class="btn-status" onclick="togglePayableStatus('${e.id}')">${btnText}</button>
+        <button class="btn-del" onclick="deleteCloudItem('payables', '${e.id}')">✕</button>
+      </div>
+    `;
+    
+    if(e.isPaid) {
+      sumPaid += e.amount; paidHtml += html;
+    } else {
+      sumUnpaid += e.amount; unpaidHtml += html;
+    }
+  });
+  
+  $("sumUnpaid").textContent = sumUnpaid.toLocaleString();
+  $("sumPaid").textContent = sumPaid.toLocaleString();
+  $("unpaidList").innerHTML = unpaidHtml || '<div class="empty">🎉 目前沒有與你相關的未付款項。</div>';
+  $("paidList").innerHTML = paidHtml || '<div class="empty">暫無歷史紀錄</div>';
 }
 
-function fmt(n){ return Math.round(n).toLocaleString("en-US"); }
-function fmtDate(d){
-  const p = d.split("-");
-  return p.length===3 ? `${p[1]}/${p[2]}` : d;
-}
-function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+$("addLedgerBtn").onclick = async () => {
+  const amount = parseFloat($("amount").value); if(!amount || amount <= 0) return;
+  const payload = { type: "ledger", id: "L-"+Date.now(), user: currentUser, amount: amount, category: $("category").value, date: $("date").value, note: $("note").value.trim() };
+  cloudData.ledger.unshift(payload); renderAll();
+  $("amount").value = ""; $("note").value = "";
+  await sendToGas(payload); fetchCloudData();
+};
 
-/* 圖片放大 */
-function openLightbox(src){
-  $("lightboxImg").src = src;
-  $("lightbox").classList.add("show");
-}
-$("lightbox").onclick = ()=> $("lightbox").classList.remove("show");
+$("addPayableBtn").onclick = async () => {
+  const who = $("pWho").value;
+  const amount = parseFloat($("pAmount").value);
+  if(who === currentUser) { alert("不能登記欠自己錢喔！"); return; }
+  if(!amount || amount <= 0) return;
+  
+  const payload = { type: "payables", id: "P-"+Date.now(), user: currentUser, who: who, amount: amount, dueDate: "", note: $("pNote").value.trim(), isPaid: false };
+  cloudData.payables.unshift(payload); renderAll();
+  $("pAmount").value = ""; $("pNote").value = "";
+  await sendToGas(payload); fetchCloudData();
+};
 
-/* 本地儲存 */
-function saveToLocal(){
-  try{
-    localStorage.setItem(KEY, JSON.stringify(entries));
-  }catch(err){
-    console.error("儲存失敗",err);
-    alert("手機本機容量空間不夠，部分相片明細無法暫存（但文字帳目會照常運作）。");
-  }
-}
-
-function loadFromLocal(){
-  try{
-    const localData = localStorage.getItem(KEY);
-    entries = localData ? JSON.parse(localData) : [];
-  }catch(err){
-    entries = [];
-  }
-  render();
+async function togglePayableStatus(id) {
+  const payload = { action: "togglePaid", id: id };
+  cloudData.payables = cloudData.payables.map(e => { if(e.id === id) e.isPaid = !e.isPaid; return e; });
+  renderAll(); await sendToGas(payload); fetchCloudData();
 }
 
-loadFromLocal();
+async function deleteCloudItem(type, id) {
+  if(!confirm("確定要刪除嗎？")) return;
+  const payload = { action: "delete", type: type, id: id };
+  if(type === 'ledger') cloudData.ledger = cloudData.ledger.filter(e => e.id !== id);
+  else cloudData.payables = cloudData.payables.filter(e => e.id !== id);
+  renderAll(); await sendToGas(payload); fetchCloudData();
+}
+
+async function sendToGas(payload) {
+  try { await fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch(err) {}
+}
+function escapeHtml(s){ return s ? s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])) : ""; }
 </script>
 </body>
 </html>
